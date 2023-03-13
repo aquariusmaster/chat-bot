@@ -3,26 +3,42 @@ package com.anderb.chatbot;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
-import java.util.Map;
+public class BotApplication implements RequestHandler<Update, BotApiMethod<?>> {
 
-public class BotApplication implements RequestHandler<Map<String,String>, String> {
+    private static ChatBot bot;
 
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+//    public BotApplication() throws TelegramApiException {
+//        var config = new BotConfig();
+//        bot = new ChatBot(config.getWebhookPath(), config.getBotName(), config.getBotToken());
+//        var setWebhook = SetWebhook.builder().url(config.getWebhookPath()).build();
+//        bot.setWebhook(setWebhook);
+//    }
 
-    public String handleRequest(Map<String,String> event, final Context context) {
+    public static void main(String[] args) throws TelegramApiException {
+        TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
+        try {
+            var config = new BotConfig();
+            bot = new ChatBot(config.getWebhookPath(), config.getBotName(), config.getBotToken());
+            var setWebhook = SetWebhook.builder().url(config.getWebhookPath()).build();
+            telegramBotsApi.registerBot(bot, setWebhook);
+        } catch (TelegramApiRequestException e) {
+            System.out.println("Failed to register bot(check internet connection / bot token or make sure only one instance of bot is running).");
+            throw e;
+        }
+        System.out.println("Telegram bot is ready to accept updates from user......");
+    }
+
+    public BotApiMethod<?> handleRequest(Update chatUpdate, Context context) {
         LambdaLogger logger = context.getLogger();
-        // log execution details
-        var envs = gson.toJson(System.getenv());
-        logger.log("ENVIRONMENT VARIABLES: " + envs);
-        var contextStr = gson.toJson(context);
-        logger.log("CONTEXT: " + contextStr);
-        // process event
-        var eventStr = gson.toJson(event);
-        logger.log("EVENT: " + eventStr);
-        logger.log("EVENT TYPE: " + event.getClass().toString());
-        return "200 OK: " + envs + ", context: " + contextStr + ", event: " + eventStr;
+        logger.log("Chat update: " + chatUpdate);
+        return bot.onWebhookUpdateReceived(chatUpdate);
     }
 }
