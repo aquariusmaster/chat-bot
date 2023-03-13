@@ -2,43 +2,52 @@ package com.anderb.chatbot;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
-import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
-import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import org.telegram.telegrambots.meta.bots.AbsSender;
 
-public class BotApplication implements RequestHandler<Update, BotApiMethod<?>> {
+import java.io.InputStream;
+import java.io.OutputStream;
 
-    private static ChatBot bot;
+import static java.lang.System.getenv;
 
-//    public BotApplication() throws TelegramApiException {
-//        var config = new BotConfig();
-//        bot = new ChatBot(config.getWebhookPath(), config.getBotName(), config.getBotToken());
-//        var setWebhook = SetWebhook.builder().url(config.getWebhookPath()).build();
-//        bot.setWebhook(setWebhook);
-//    }
+public class BotApplication implements RequestStreamHandler {
 
-    public static void main(String[] args) throws TelegramApiException {
-        TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
-        try {
-            var config = new BotConfig();
-            bot = new ChatBot(config.getWebhookPath(), config.getBotName(), config.getBotToken());
-            var setWebhook = SetWebhook.builder().url(config.getWebhookPath()).build();
-            telegramBotsApi.registerBot(bot, setWebhook);
-        } catch (TelegramApiRequestException e) {
-            System.out.println("Failed to register bot(check internet connection / bot token or make sure only one instance of bot is running).");
-            throw e;
-        }
-        System.out.println("Telegram bot is ready to accept updates from user......");
-    }
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final AbsSender SENDER = new ChatBot(getenv("bot_username"), getenv("bot_token"), getenv("bot_url"));
 
-    public BotApiMethod<?> handleRequest(Update chatUpdate, Context context) {
+    @Override
+    public void handleRequest(InputStream input, OutputStream output, Context context) {
         LambdaLogger logger = context.getLogger();
-        logger.log("Chat update: " + chatUpdate);
-        return bot.onWebhookUpdateReceived(chatUpdate);
+        logger.log("Parsing request");
+        Update update = getUpdate(input);
+        logger.log("Handling Update: " + update);
+        handleUpdate(update);
     }
+
+    private Update getUpdate(InputStream input) {
+        try {
+            return MAPPER.readValue(input, Update.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse update!", e);
+        }
+    }
+
+    private void handleUpdate(Update update) {
+        if (update == null || update.getMessage() == null) {
+            return;
+        }
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(update.getMessage().getChatId())
+                .text("Echo> " + update.getMessage().getText())
+                .build();
+        try {
+            SENDER.execute(sendMessage);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send message!", e);
+        }
+    }
+
 }
