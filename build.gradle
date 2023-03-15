@@ -14,6 +14,8 @@ dependencies {
     implementation 'com.amazonaws:aws-lambda-java-events:3.11.0'
     runtimeOnly 'com.amazonaws:aws-lambda-java-log4j2:1.5.1'
     implementation 'org.telegram:telegrambots:6.5.0'
+    compileOnly 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'

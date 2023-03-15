@@ -3,6 +3,7 @@ package com.anderb.chatbot;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -42,12 +43,12 @@ public class BotApplication implements RequestStreamHandler {
     }
 
     private void handleUpdate(Update update) {
-        if (update == null || update.getMessage() == null) {
-            return;
-        }
+        String prompt = update.getMessage().getText();
+        String response = ChatGptService.chatCall(prompt);
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(update.getMessage().getChatId())
-                .text("Echo> " + update.getMessage().getText())
+                .text(response)
+                .parseMode(ParseMode.MARKDOWN)
                 .build();
         try {
             SENDER.execute(sendMessage);
