@@ -53,7 +53,7 @@ public class ChatGptService {
     private static String parseResponse(CloseableHttpResponse response) throws IOException {
         var responseEntity = response.getEntity();
         var responseJson = new String(responseEntity.getContent().readAllBytes(), StandardCharsets.UTF_8);
-        Logger.debug(ChatGptService.class.getSimpleName() + " ChatGPT => %s", responseJson);
+        Logger.debug(ChatGptService.class.getSimpleName() + " ChatGPT <= %s", responseJson);
         if (response.getStatusLine().getStatusCode() >= 300) {
             var errorResponse = MAPPER.readValue(responseJson, ChatGPTErrorResponse.class);
             return errorResponse.getError().getMessage();
