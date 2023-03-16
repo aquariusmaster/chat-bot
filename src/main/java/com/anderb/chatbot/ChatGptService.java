@@ -31,7 +31,7 @@ public class ChatGptService {
             var response = httpclient.execute(httpPost);
             return parseResponse(response);
         } catch (IOException e) {
-            var errorMsg = ChatGptService.class.getSimpleName() + " Chat call error => %s" + e.getMessage();
+            var errorMsg = ChatGptService.class.getSimpleName() + " Chat call error: %s" + e.getMessage();
             Logger.error(errorMsg);
             return errorMsg;
         }
