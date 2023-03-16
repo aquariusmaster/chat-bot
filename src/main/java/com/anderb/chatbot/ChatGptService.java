@@ -40,7 +40,7 @@ public class ChatGptService {
     private static String parseResponse(CloseableHttpResponse response) throws IOException {
         var responseEntity = response.getEntity();
         var content = new String(responseEntity.getContent().readAllBytes(), StandardCharsets.UTF_8);
-        System.out.println("ChatGpt response: " + content);
+        System.out.println("ChatGPT: " + content);
         var chatResponse = MAPPER.readValue(content, ChatGPTResponse.class);
         return chatResponse.getChoices().get(0).getMessage().getContent();
     }
