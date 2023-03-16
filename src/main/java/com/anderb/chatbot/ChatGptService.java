@@ -25,7 +25,7 @@ public class ChatGptService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public static String chatCall(String messagePrompt) {
+    public static String callChat(String messagePrompt) {
         try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             var httpPost = preparePostRequest(messagePrompt);
             var response = httpclient.execute(httpPost);
@@ -41,6 +41,10 @@ public class ChatGptService {
         var responseEntity = response.getEntity();
         var content = new String(responseEntity.getContent().readAllBytes(), StandardCharsets.UTF_8);
         System.out.println("ChatGPT: " + content);
+        if (response.getStatusLine().getStatusCode() >= 300) {
+            var errorResponse = MAPPER.readValue(content, ChatGPTErrorResponse.class);
+            return errorResponse.getError().getMessage();
+        }
         var chatResponse = MAPPER.readValue(content, ChatGPTResponse.class);
         return chatResponse.getChoices().get(0).getMessage().getContent();
     }
@@ -92,5 +96,24 @@ public class ChatGptService {
 
         private Message message;
 
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class ChatGPTErrorResponse {
+
+        private ChatError error;
+
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class ChatError {
+        private String message;
+        private String type;
+        private String param;
+        private String code;
     }
 }

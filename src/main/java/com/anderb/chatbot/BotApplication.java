@@ -27,7 +27,7 @@ public class BotApplication implements RequestStreamHandler {
         Update update = getUpdate(input);
         if (!isValidUpdate(update)) return;
         String prompt = update.getMessage().getText();
-        String response = ChatGptService.chatCall(prompt);
+        String response = ChatGptService.callChat(prompt);
         Long chatId = update.getMessage().getChatId();
         sendResponse(chatId, response);
     }
