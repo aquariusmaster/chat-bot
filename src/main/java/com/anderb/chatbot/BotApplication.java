@@ -13,6 +13,7 @@ import org.telegram.telegrambots.meta.bots.AbsSender;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static java.lang.System.getenv;
@@ -21,11 +22,15 @@ public class BotApplication implements RequestStreamHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final AbsSender SENDER = new ChatBot(getenv("bot_username"), getenv("bot_token"), getenv("bot_url"));
+    private final String CLASS_NAME = getClass().getSimpleName();
 
     @Override
     public void handleRequest(InputStream input, OutputStream output, Context context) {
         Update update = getUpdate(input);
-        if (!isValidUpdate(update)) return;
+        if (!isValidUpdate(update)) {
+            Logger.debug(CLASS_NAME + " Invalid update request");
+            return;
+        }
         String prompt = update.getMessage().getText();
         String response = ChatGptService.callChat(prompt);
         Long chatId = update.getMessage().getChatId();
@@ -34,9 +39,11 @@ public class BotApplication implements RequestStreamHandler {
 
     private Update getUpdate(InputStream input) {
         try {
-            return MAPPER.readValue(input, Update.class);
+            String inputJson = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            Logger.debug(CLASS_NAME + " Update: %s", inputJson);
+            return MAPPER.readValue(inputJson, Update.class);
         } catch (Exception e) {
-            System.err.println("Exception while parsing: " + e.getMessage());
+            Logger.error(CLASS_NAME + " Exception while parsing: %s",  e.getMessage());
             throw new RuntimeException("Failed to parse update!", e);
         }
     }
@@ -50,6 +57,7 @@ public class BotApplication implements RequestStreamHandler {
                     .build();
             SENDER.execute(sendMessage);
         } catch (Exception e) {
+            Logger.error(CLASS_NAME + " Exception while sending response: %s", e.getMessage());
             throw new RuntimeException("Failed to send message!", e);
         }
     }

@@ -27,39 +27,39 @@ public class ChatGptService {
 
     public static String callChat(String messagePrompt) {
         try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
-            var httpPost = preparePostRequest(messagePrompt);
+            var httpPost = prepareRequest(messagePrompt);
             var response = httpclient.execute(httpPost);
             return parseResponse(response);
         } catch (IOException e) {
-            var errorMsg = "Chat call error: " + e.getMessage();
-            System.err.println(errorMsg);
+            var errorMsg = ChatGptService.class.getSimpleName() + " Chat call error => %s" + e.getMessage();
+            Logger.error(errorMsg);
             return errorMsg;
         }
     }
 
-    private static String parseResponse(CloseableHttpResponse response) throws IOException {
-        var responseEntity = response.getEntity();
-        var content = new String(responseEntity.getContent().readAllBytes(), StandardCharsets.UTF_8);
-        System.out.println("ChatGPT: " + content);
-        if (response.getStatusLine().getStatusCode() >= 300) {
-            var errorResponse = MAPPER.readValue(content, ChatGPTErrorResponse.class);
-            return errorResponse.getError().getMessage();
-        }
-        var chatResponse = MAPPER.readValue(content, ChatGPTResponse.class);
-        return chatResponse.getChoices().get(0).getMessage().getContent();
-    }
-
-    private static HttpUriRequest preparePostRequest(String messagePrompt) throws JsonProcessingException {
+    private static HttpUriRequest prepareRequest(String messagePrompt) throws JsonProcessingException {
         var message = new Message("user", messagePrompt);
         var prompt = new ChatPrompt("gpt-3.5-turbo", List.of(message));
-        var json = MAPPER.writeValueAsString(prompt);
-        System.out.println("Prompt: " + json);
-        StringEntity entity = new StringEntity(json, ContentType.APPLICATION_JSON);
+        var requestJson = MAPPER.writeValueAsString(prompt);
+        Logger.debug(ChatGptService.class.getSimpleName() + " Request => %s", requestJson);
+        StringEntity entity = new StringEntity(requestJson, ContentType.APPLICATION_JSON);
         return RequestBuilder.post(getenv("OPENAI_API_URL"))
                 .addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + getenv("OPENAI_API_KEY"))
                 .addHeader("Accept", "application/json")
                 .setEntity(entity)
                 .build();
+    }
+
+    private static String parseResponse(CloseableHttpResponse response) throws IOException {
+        var responseEntity = response.getEntity();
+        var responseJson = new String(responseEntity.getContent().readAllBytes(), StandardCharsets.UTF_8);
+        Logger.debug(ChatGptService.class.getSimpleName() + " ChatGPT => %s", responseJson);
+        if (response.getStatusLine().getStatusCode() >= 300) {
+            var errorResponse = MAPPER.readValue(responseJson, ChatGPTErrorResponse.class);
+            return errorResponse.getError().getMessage();
+        }
+        var chatResponse = MAPPER.readValue(responseJson, ChatGPTResponse.class);
+        return chatResponse.getChoices().get(0).getMessage().getContent();
     }
 
     @Getter
