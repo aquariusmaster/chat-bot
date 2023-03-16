@@ -3,6 +3,7 @@ package com.anderb.chatbot;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.StringUtils;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -12,11 +13,7 @@ import org.telegram.telegrambots.meta.bots.AbsSender;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static java.lang.System.getenv;
 
@@ -24,13 +21,15 @@ public class BotApplication implements RequestStreamHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final AbsSender SENDER = new ChatBot(getenv("bot_username"), getenv("bot_token"), getenv("bot_url"));
-    private static final Set<Long> WHITELISTED_USERS = getWhitelistedUsers();
 
     @Override
     public void handleRequest(InputStream input, OutputStream output, Context context) {
-        var update = getUpdate(input);
-        if (!isValidUser(update)) return;
-        handleUpdate(update);
+        Update update = getUpdate(input);
+        if (!isValidUpdate(update)) return;
+        String prompt = update.getMessage().getText();
+        String response = ChatGptService.chatCall(prompt);
+        Long chatId = update.getMessage().getChatId();
+        sendResponse(chatId, response);
     }
 
     private Update getUpdate(InputStream input) {
@@ -42,40 +41,39 @@ public class BotApplication implements RequestStreamHandler {
         }
     }
 
-    private void handleUpdate(Update update) {
-        String prompt = update.getMessage().getText();
-        String response = ChatGptService.chatCall(prompt);
-        SendMessage sendMessage = SendMessage.builder()
-                .chatId(update.getMessage().getChatId())
-                .text(response)
-                .parseMode(ParseMode.MARKDOWN)
-                .build();
+    private void sendResponse(Long chatId, String text) {
         try {
+            SendMessage sendMessage = SendMessage.builder()
+                    .chatId(chatId)
+                    .text(text)
+                    .parseMode(ParseMode.MARKDOWN)
+                    .build();
             SENDER.execute(sendMessage);
         } catch (Exception e) {
             throw new RuntimeException("Failed to send message!", e);
         }
     }
 
-    private static Set<Long> getWhitelistedUsers() {
-        return Optional.ofNullable(getenv("whitelist_users"))
-                .filter(Predicate.not(String::isBlank))
-                .map(users -> users.split(","))
-                .stream()
-                .flatMap(Arrays::stream)
-                .map(String::trim)
-                .filter(Predicate.not(String::isBlank))
-                .map(Long::parseLong)
-                .collect(Collectors.toSet());
-    }
-
-    private boolean isValidUser(Update update) {
+    private boolean isValidUpdate(Update update) {
         return Optional.ofNullable(update)
                 .map(Update::getMessage)
+                .filter(message -> message.getChatId() != null)
+                .filter(message -> StringUtils.isNotBlank(message.getText()))
                 .map(Message::getFrom)
                 .map(User::getId)
-                .filter(WHITELISTED_USERS::contains)
+                .filter(this::isAllowedUser)
                 .isPresent();
+    }
+
+    private boolean isAllowedUser(Long userId) {
+        String allowedUsers = getenv("allowed_users");
+        if (allowedUsers == null || allowedUsers.isBlank()) {
+            return false;
+        }
+        if ("*".equals(allowedUsers)) {
+            return true;
+        }
+        return allowedUsers.contains(userId.toString());
     }
 
 }
