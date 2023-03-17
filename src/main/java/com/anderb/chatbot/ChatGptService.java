@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -18,6 +19,8 @@ import org.apache.http.impl.client.HttpClients;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 import static java.lang.System.getenv;
 
@@ -52,14 +55,28 @@ public class ChatGptService {
 
     private static String parseResponse(CloseableHttpResponse response) throws IOException {
         var responseEntity = response.getEntity();
-        var responseJson = new String(responseEntity.getContent().readAllBytes(), StandardCharsets.UTF_8);
+        var responseJson = IOUtils.toString(responseEntity.getContent(), StandardCharsets.UTF_8);
         Logger.debug(ChatGptService.class.getSimpleName() + " ChatGPT <= %s", responseJson);
         if (response.getStatusLine().getStatusCode() >= 300) {
             var errorResponse = MAPPER.readValue(responseJson, ChatGPTErrorResponse.class);
             return errorResponse.getError().getMessage();
         }
         var chatResponse = MAPPER.readValue(responseJson, ChatGPTResponse.class);
-        return chatResponse.getChoices().get(0).getMessage().getContent();
+        return Optional.ofNullable(chatResponse)
+                .map(ChatGPTResponse::getChoices)
+                .filter(Predicate.not(List::isEmpty))
+                .map(choices -> choices.get(0))
+                .map(Choice::getMessage)
+                .map(Message::getContent)
+                .map(ChatGptService::escapeSpecialChars)
+                .orElse(null);
+    }
+
+    private static String escapeSpecialChars(String msg) {
+        return msg
+                .replace("_", "\\_")
+                .replace("*", "\\*")
+                .replace("[", "\\[");
     }
 
     @Getter

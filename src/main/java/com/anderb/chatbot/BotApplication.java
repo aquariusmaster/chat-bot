@@ -3,6 +3,8 @@ package com.anderb.chatbot;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -39,15 +41,16 @@ public class BotApplication implements RequestStreamHandler {
 
     private Update getUpdate(InputStream input) {
         try {
-            String inputJson = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            String inputJson = IOUtils.toString(input, StandardCharsets.UTF_8);
             Logger.debug(CLASS_NAME + " Update: %s", inputJson);
             return MAPPER.readValue(inputJson, Update.class);
         } catch (Exception e) {
-            Logger.error(CLASS_NAME + " Exception while parsing: %s",  e.getMessage());
+            Logger.error(CLASS_NAME + " Exception while parsing: %s", e.getMessage());
             throw new RuntimeException("Failed to parse update!", e);
         }
     }
 
+    @SneakyThrows
     private void sendResponse(Long chatId, String text) {
         try {
             SendMessage sendMessage = SendMessage.builder()
@@ -58,7 +61,12 @@ public class BotApplication implements RequestStreamHandler {
             SENDER.execute(sendMessage);
         } catch (Exception e) {
             Logger.error(CLASS_NAME + " Exception while sending response: %s", e.getMessage());
-            throw new RuntimeException("Failed to send message!", e);
+            Logger.error(CLASS_NAME + " Trying to fallback with simplified text");
+            SendMessage sendMessage = SendMessage.builder()
+                    .chatId(chatId)
+                    .text(text)
+                    .build();
+            SENDER.execute(sendMessage);
         }
     }
 
