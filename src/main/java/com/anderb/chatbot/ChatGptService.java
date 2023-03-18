@@ -68,15 +68,7 @@ public class ChatGptService {
                 .map(choices -> choices.get(0))
                 .map(Choice::getMessage)
                 .map(Message::getContent)
-                .map(ChatGptService::escapeSpecialChars)
                 .orElse(null);
-    }
-
-    private static String escapeSpecialChars(String msg) {
-        return msg
-                .replace("_", "\\_")
-                .replace("*", "\\*")
-                .replace("[", "\\[");
     }
 
     @Getter

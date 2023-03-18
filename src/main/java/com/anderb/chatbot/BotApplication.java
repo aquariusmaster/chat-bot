@@ -12,6 +12,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.bots.AbsSender;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -25,6 +26,7 @@ public class BotApplication implements RequestStreamHandler {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final AbsSender SENDER = new ChatBot(getenv("bot_username"), getenv("bot_token"), getenv("bot_url"));
     private final String CLASS_NAME = getClass().getSimpleName();
+    private final String[] ESCAPE_CHARS = {"[", "_", "*"};
 
     @Override
     public void handleRequest(InputStream input, OutputStream output, Context context) {
@@ -52,22 +54,38 @@ public class BotApplication implements RequestStreamHandler {
 
     @SneakyThrows
     private void sendResponse(Long chatId, String text) {
-        try {
-            SendMessage sendMessage = SendMessage.builder()
-                    .chatId(chatId)
-                    .text(text)
-                    .parseMode(ParseMode.MARKDOWN)
-                    .build();
-            SENDER.execute(sendMessage);
-        } catch (Exception e) {
-            Logger.error(CLASS_NAME + " Exception while sending response: %s", e.getMessage());
+        boolean success = sendMarkDown(chatId, text);
+        if (!success) {
             Logger.error(CLASS_NAME + " Trying to fallback with simplified text");
-            SendMessage sendMessage = SendMessage.builder()
-                    .chatId(chatId)
-                    .text(text)
-                    .build();
-            SENDER.execute(sendMessage);
+            sendMessage(chatId, text, null);
         }
+    }
+
+    private boolean sendMarkDown(Long chatId, String text) {
+        int retry = 0;
+        do {
+            try {
+                sendMessage(chatId, text, ParseMode.MARKDOWN);
+                return true;
+            } catch (TelegramApiException e) {
+                Logger.error(CLASS_NAME + " Exception while sending response: %s", e.getMessage());
+                if (!e.getMessage().contains("Bad Request: can't parse entities")) {
+                    return false;
+                }
+                String escapeChar = ESCAPE_CHARS[retry++];
+                text = text.replace(escapeChar, "\\" + escapeChar);
+            }
+        } while (retry < ESCAPE_CHARS.length);
+        return false;
+    }
+
+    private void sendMessage(Long chatId, String text, String parseMode) throws TelegramApiException {
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .parseMode(parseMode)
+                .build();
+        SENDER.execute(sendMessage);
     }
 
     private boolean isValidUpdate(Update update) {
