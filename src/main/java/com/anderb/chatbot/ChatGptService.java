@@ -34,7 +34,7 @@ public class ChatGptService {
             var response = httpclient.execute(httpPost);
             return parseResponse(response);
         } catch (IOException e) {
-            var errorMsg = " Chat call error: %s" + e.getMessage();
+            var errorMsg = "Chat call error: %s" + e.getMessage();
             Logger.debug(errorMsg);
             return errorMsg;
         }
@@ -42,9 +42,9 @@ public class ChatGptService {
 
     private static HttpUriRequest prepareRequest(String messagePrompt) throws JsonProcessingException {
         var message = new Message("user", messagePrompt);
-        var prompt = new ChatPrompt("gpt-3.5-turbo", List.of(message));
+        var prompt = new ChatPrompt(getenv("AI_MODEL"), List.of(message));
         var requestJson = MAPPER.writeValueAsString(prompt);
-        Logger.debug(" Request => %s", requestJson);
+        Logger.debug("Request => %s", requestJson);
         StringEntity entity = new StringEntity(requestJson, ContentType.APPLICATION_JSON);
         return RequestBuilder.post(getenv("OPENAI_API_URL"))
                 .addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + getenv("OPENAI_API_KEY"))
@@ -56,7 +56,7 @@ public class ChatGptService {
     private static String parseResponse(CloseableHttpResponse response) throws IOException {
         var responseEntity = response.getEntity();
         var responseJson = IOUtils.toString(responseEntity.getContent(), StandardCharsets.UTF_8);
-        Logger.debug(" ChatGPT <= %s", responseJson);
+        Logger.debug("ChatGPT <= %s", responseJson);
         if (response.getStatusLine().getStatusCode() >= 300) {
             var errorResponse = MAPPER.readValue(responseJson, ChatGPTErrorResponse.class);
             return errorResponse.getError().getMessage();
