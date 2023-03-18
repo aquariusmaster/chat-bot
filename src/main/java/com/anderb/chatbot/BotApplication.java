@@ -25,14 +25,13 @@ public class BotApplication implements RequestStreamHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final AbsSender SENDER = new ChatBot(getenv("bot_username"), getenv("bot_token"), getenv("bot_url"));
-    private final String CLASS_NAME = getClass().getSimpleName();
     private final String[] ESCAPE_CHARS = {"[", "_", "*"};
 
     @Override
     public void handleRequest(InputStream input, OutputStream output, Context context) {
         Update update = getUpdate(input);
         if (!isValidUpdate(update)) {
-            Logger.debug(CLASS_NAME + " Invalid update request");
+            Logger.debug("Invalid update request");
             return;
         }
         String prompt = update.getMessage().getText();
@@ -44,10 +43,10 @@ public class BotApplication implements RequestStreamHandler {
     private Update getUpdate(InputStream input) {
         try {
             String inputJson = IOUtils.toString(input, StandardCharsets.UTF_8);
-            Logger.debug(CLASS_NAME + " Update: %s", inputJson);
+            Logger.debug("Update: %s", inputJson);
             return MAPPER.readValue(inputJson, Update.class);
         } catch (Exception e) {
-            Logger.error(CLASS_NAME + " Exception while parsing: %s", e.getMessage());
+            Logger.error("Exception while parsing: %s", e.getMessage());
             throw new RuntimeException("Failed to parse update!", e);
         }
     }
@@ -56,7 +55,7 @@ public class BotApplication implements RequestStreamHandler {
     private void sendResponse(Long chatId, String text) {
         boolean success = sendMarkDown(chatId, text);
         if (!success) {
-            Logger.error(CLASS_NAME + " Trying to fallback with simplified text");
+            Logger.error("Trying to fallback with simplified text");
             sendMessage(chatId, text, null);
         }
     }
@@ -68,7 +67,7 @@ public class BotApplication implements RequestStreamHandler {
                 sendMessage(chatId, text, ParseMode.MARKDOWN);
                 return true;
             } catch (TelegramApiException e) {
-                Logger.error(CLASS_NAME + " Exception while sending response: %s", e.getMessage());
+                Logger.error( "Retry: %d Exception while sending response: %s", retry + 1, e.getMessage());
                 if (!e.getMessage().contains("Bad Request: can't parse entities")) {
                     return false;
                 }
