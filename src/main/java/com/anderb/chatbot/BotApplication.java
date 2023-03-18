@@ -67,7 +67,7 @@ public class BotApplication implements RequestStreamHandler {
                 sendMessage(chatId, text, ParseMode.MARKDOWN);
                 return true;
             } catch (TelegramApiException e) {
-                Logger.error( "Retry: %d Exception while sending response: %s", retry + 1, e.getMessage());
+                Logger.error( "Retry: %d %s", retry + 1, e.getMessage());
                 if (!e.getMessage().contains("Bad Request: can't parse entities")) {
                     return false;
                 }
