@@ -24,7 +24,7 @@ import static java.lang.System.getenv;
 public class BotApplication implements RequestStreamHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final AbsSender SENDER = new ChatBot(getenv("bot_username"), getenv("bot_token"), getenv("bot_url"));
+    private static final AbsSender SENDER = new ChatBot(getenv("BOT_USERNAME"), getenv("BOT_TOKEN"), getenv("BOT_URL"));
     private final String[] ESCAPE_CHARS = {"[", "_", "*"};
 
     @Override
@@ -99,7 +99,7 @@ public class BotApplication implements RequestStreamHandler {
     }
 
     private boolean isAllowedUser(Long userId) {
-        String allowedUsers = getenv("allowed_users");
+        String allowedUsers = getenv("ALLOWED_USERS");
         if (allowedUsers == null || allowedUsers.isBlank()) {
             return false;
         }

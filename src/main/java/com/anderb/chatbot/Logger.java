@@ -9,7 +9,7 @@ public class Logger {
     private static final boolean debugEnabled;
 
     static {
-        debugEnabled = Optional.ofNullable(getenv("debug"))
+        debugEnabled = Optional.ofNullable(getenv("DEBUG"))
                 .filter(Boolean::parseBoolean)
                 .isPresent();
     }
