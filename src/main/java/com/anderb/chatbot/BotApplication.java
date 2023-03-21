@@ -27,7 +27,6 @@ public class BotApplication implements RequestStreamHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final AbsSender SENDER = new ChatBot(BOT_USERNAME, BOT_TOKEN, BOT_URL);
-    private final String[] ESCAPE_CHARS = {"[", "_", "*"};
 
     @Override
     public void handleRequest(InputStream input, OutputStream output, Context context) {
@@ -55,29 +54,12 @@ public class BotApplication implements RequestStreamHandler {
 
     @SneakyThrows
     private void sendResponse(Long chatId, String text) {
-        boolean success = sendMarkDown(chatId, text);
-        if (!success) {
-            log.debug("Trying to fallback with simplified text");
+        try {
+            sendMessage(chatId, text.replaceAll("([_\\[*])", "\\\\$1"), ParseMode.MARKDOWN);
+        } catch (TelegramApiException e) {
+            log.debug("Cannot send message in markdown: {}", e.getMessage());
             sendMessage(chatId, text, null);
         }
-    }
-
-    private boolean sendMarkDown(Long chatId, String text) {
-        int retry = 0;
-        do {
-            try {
-                sendMessage(chatId, text, ParseMode.MARKDOWN);
-                return true;
-            } catch (TelegramApiException e) {
-                log.debug("Retry: {} {}", retry + 1, e.getMessage());
-                if (!e.getMessage().contains("Bad Request: can't parse entities")) {
-                    return false;
-                }
-                String escapeChar = ESCAPE_CHARS[retry++];
-                text = text.replace(escapeChar, "\\" + escapeChar);
-            }
-        } while (retry < ESCAPE_CHARS.length);
-        return false;
     }
 
     private void sendMessage(Long chatId, String text, String parseMode) throws TelegramApiException {

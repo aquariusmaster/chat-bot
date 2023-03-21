@@ -1,11 +1,9 @@
 package com.anderb.chatbot;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
@@ -73,8 +71,7 @@ public class ChatGptService {
                 .orElseThrow(() -> new IOException("Invalid ChatGPT response"));
     }
 
-    @Getter
-    @NoArgsConstructor
+    @Data
     @AllArgsConstructor
     private static class ChatPrompt {
         private String model;
@@ -82,49 +79,43 @@ public class ChatGptService {
 
     }
 
-    @Getter
-    @NoArgsConstructor
+    @Data
     @AllArgsConstructor
     private static class Message {
+
         private String role;
         private String content;
 
     }
 
-    @Getter
-    @NoArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Data
     private static class ChatGPTResponse {
 
         private List<Choice> choices;
 
     }
 
-    @Getter
-    @NoArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Data
     private static class Choice {
 
         private Message message;
 
     }
 
-    @Getter
-    @NoArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Data
     private static class ChatGPTErrorResponse {
 
         private ChatError error;
 
     }
 
-    @Getter
-    @NoArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Data
     private static class ChatError {
+
         private String message;
         private String type;
         private String param;
         private String code;
+
     }
 }
