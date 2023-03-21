@@ -19,12 +19,12 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
-import static java.lang.System.getenv;
+import static com.anderb.chatbot.Config.*;
 
 public class BotApplication implements RequestStreamHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final AbsSender SENDER = new ChatBot(getenv("BOT_USERNAME"), getenv("BOT_TOKEN"), getenv("BOT_URL"));
+    private static final AbsSender SENDER = new ChatBot(BOT_USERNAME, BOT_TOKEN, BOT_URL);
     private final String[] ESCAPE_CHARS = {"[", "_", "*"};
 
     @Override
@@ -99,7 +99,7 @@ public class BotApplication implements RequestStreamHandler {
     }
 
     private boolean isAllowedUser(Long userId) {
-        String allowedUsers = getenv("ALLOWED_USERS");
+        String allowedUsers = ALLOWED_USERS;
         if (allowedUsers == null || allowedUsers.isBlank()) {
             return false;
         }
