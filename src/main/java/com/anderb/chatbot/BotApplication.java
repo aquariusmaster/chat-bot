@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
@@ -21,6 +22,7 @@ import java.util.Optional;
 
 import static com.anderb.chatbot.Config.*;
 
+@Slf4j
 public class BotApplication implements RequestStreamHandler {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -31,7 +33,7 @@ public class BotApplication implements RequestStreamHandler {
     public void handleRequest(InputStream input, OutputStream output, Context context) {
         Update update = getUpdate(input);
         if (!isValidUpdate(update)) {
-            Logger.debug("Invalid update request");
+            log.debug("Invalid update request");
             return;
         }
         String prompt = update.getMessage().getText();
@@ -43,10 +45,10 @@ public class BotApplication implements RequestStreamHandler {
     private Update getUpdate(InputStream input) {
         try {
             String inputJson = IOUtils.toString(input, StandardCharsets.UTF_8);
-            Logger.debug("Update: %s", inputJson);
+            log.debug("Update: {}", inputJson);
             return MAPPER.readValue(inputJson, Update.class);
         } catch (Exception e) {
-            Logger.debug("Exception while parsing: %s", e.getMessage());
+            log.debug("Exception while parsing: {}", e.getMessage());
             throw new RuntimeException("Failed to parse update!", e);
         }
     }
@@ -55,7 +57,7 @@ public class BotApplication implements RequestStreamHandler {
     private void sendResponse(Long chatId, String text) {
         boolean success = sendMarkDown(chatId, text);
         if (!success) {
-            Logger.debug("Trying to fallback with simplified text");
+            log.debug("Trying to fallback with simplified text");
             sendMessage(chatId, text, null);
         }
     }
@@ -67,7 +69,7 @@ public class BotApplication implements RequestStreamHandler {
                 sendMessage(chatId, text, ParseMode.MARKDOWN);
                 return true;
             } catch (TelegramApiException e) {
-                Logger.debug( "Retry: %d %s", retry + 1, e.getMessage());
+                log.debug("Retry: {} {}", retry + 1, e.getMessage());
                 if (!e.getMessage().contains("Bad Request: can't parse entities")) {
                     return false;
                 }

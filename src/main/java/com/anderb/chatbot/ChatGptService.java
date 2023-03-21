@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -24,6 +25,7 @@ import java.util.function.Predicate;
 
 import static com.anderb.chatbot.Config.*;
 
+@Slf4j
 public class ChatGptService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -35,7 +37,7 @@ public class ChatGptService {
             return parseResponse(response);
         } catch (IOException e) {
             var errorMsg = String.format("Chat call error: %s", e.getMessage());
-            Logger.debug(errorMsg);
+            log.debug(errorMsg);
             return errorMsg;
         }
     }
@@ -44,7 +46,7 @@ public class ChatGptService {
         var message = new Message("user", messagePrompt);
         var prompt = new ChatPrompt(AI_MODEL, List.of(message));
         var requestJson = MAPPER.writeValueAsString(prompt);
-        Logger.debug("Request => %s", requestJson);
+        log.debug("Request => {}", requestJson);
         StringEntity entity = new StringEntity(requestJson, ContentType.APPLICATION_JSON);
         return RequestBuilder.post(OPENAI_API_URL)
                 .addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + OPENAI_API_KEY)
@@ -56,7 +58,7 @@ public class ChatGptService {
     private static String parseResponse(CloseableHttpResponse response) throws IOException {
         var responseEntity = response.getEntity();
         var responseJson = IOUtils.toString(responseEntity.getContent(), StandardCharsets.UTF_8);
-        Logger.debug("ChatGPT <= %s", responseJson);
+        log.debug("ChatGPT <= {}", responseJson);
         if (response.getStatusLine().getStatusCode() >= 300) {
             var errorResponse = MAPPER.readValue(responseJson, ChatGPTErrorResponse.class);
             return errorResponse.getError().getMessage();

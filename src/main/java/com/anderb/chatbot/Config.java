@@ -10,9 +10,5 @@ public class Config {
     public static final String AI_MODEL = System.getenv("AI_MODEL");
     public static final String OPENAI_API_URL = System.getenv("OPENAI_API_URL");
     public static final String OPENAI_API_KEY = System.getenv("OPENAI_API_KEY");
-    public static final boolean DEBUG = Optional.ofNullable(System.getenv("DEBUG"))
-            .filter(Boolean::parseBoolean)
-            .isPresent();
-
 
 }

@@ -16,5 +16,5 @@ ALLOWED_USERS: 123456789
 BOT_TOKEN: 1234567890:xxx
 BOT_URL: https://{api-id}.execute-api.{region}.amazonaws.com/{api-path}
 BOT_USERNAME: @BotName
-DEBUG: true
+JAVA_TOOL_OPTIONS: -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
 ```
