@@ -37,9 +37,9 @@ public class BotApplication implements RequestStreamHandler {
             log.debug("Invalid update request");
             return;
         }
-        String prompt = update.getMessage().getText();
-        String response = ChatGptService.callChat(prompt);
         Long chatId = update.getMessage().getChatId();
+        String prompt = update.getMessage().getText();
+        String response = ChatGptService.callChat(chatId, prompt);
         sendResponse(chatId, response);
     }
 

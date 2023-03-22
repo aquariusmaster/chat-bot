@@ -1,5 +1,9 @@
 package com.anderb.chatbot;
 
+import com.anderb.chatbot.model.ChatPrompt;
+import com.anderb.chatbot.model.ChatResponse;
+import com.anderb.chatbot.model.ErrorMessage;
+import com.anderb.chatbot.model.Message;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +19,7 @@ import org.apache.http.impl.client.HttpClients;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static com.anderb.chatbot.Config.*;
 
@@ -23,28 +28,39 @@ public class ChatGptService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public static String callChat(String messagePrompt) {
+    public static String callChat(Long chatId, String prompt) {
+        List<Message> messages = getHistory(chatId);
+        messages.add(new Message("user", prompt));
         try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
-            var httpPost = prepareRequest(messagePrompt);
+            var httpPost = prepareRequest(messages);
             var response = httpclient.execute(httpPost);
-            return parseResponse(response);
-        } catch (IOException e) {
+            Message message = parseResponse(response);
+            if (!(message instanceof ErrorMessage)) {
+                messages.add(message);
+                storeHistory(chatId, messages);
+            }
+            return message.getContent();
+        } catch (Exception e) {
             var errorMsg = String.format("Chat call error: %s", e.getMessage());
             log.debug(errorMsg);
             return errorMsg;
         }
     }
 
-    private static HttpUriRequest prepareRequest(String messagePrompt) throws JsonProcessingException {
-        String requestJson = MAPPER.createObjectNode()
-                .put("model", AI_MODEL)
-                .set("messages", MAPPER.createArrayNode()
-                        .add(MAPPER.createObjectNode()
-                                .put("role", "user")
-                                .put("content", messagePrompt)
-                        )
-                )
-                .toString();
+    private static List<Message> getHistory(Long chatId) {
+        return DynamoDbChatHistoryClient.getChatMessages(chatId);
+    }
+
+    private static void storeHistory(Long chatId, List<Message> messages) {
+        while (messages.size() >= HISTORY_LENGTH) {
+            messages.remove(0);
+        }
+        DynamoDbChatHistoryClient.putChatSession(chatId, messages);
+    }
+
+    private static HttpUriRequest prepareRequest(List<Message> messages) throws JsonProcessingException {
+        var prompt = new ChatPrompt(AI_MODEL, messages);
+        var requestJson = MAPPER.writeValueAsString(prompt);
         log.debug("Request => {}", requestJson);
         return RequestBuilder.post(OPENAI_API_URL)
                 .addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + OPENAI_API_KEY)
@@ -53,14 +69,16 @@ public class ChatGptService {
                 .build();
     }
 
-    private static String parseResponse(CloseableHttpResponse response) throws IOException {
+    private static Message parseResponse(CloseableHttpResponse response) throws IOException {
         var responseEntity = response.getEntity();
         var responseJson = IOUtils.toString(responseEntity.getContent(), StandardCharsets.UTF_8);
         log.debug("ChatGPT <= {}", responseJson);
         if (response.getStatusLine().getStatusCode() >= 300) {
-            return "Error: " + MAPPER.readTree(responseJson).get("error").get("message").asText();
+            var error = "Error: " + MAPPER.readTree(responseJson).get("error").get("message").asText();
+            return new ErrorMessage(error);
         }
-        return MAPPER.readTree(responseJson).get("choices").get(0).get("message").get("content").asText();
+        ChatResponse chatResponse = MAPPER.readValue(responseJson, ChatResponse.class);
+        return chatResponse.getChoices().get(0).getMessage();
     }
 
 }
