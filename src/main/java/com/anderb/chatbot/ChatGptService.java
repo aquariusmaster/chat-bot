@@ -52,7 +52,7 @@ public class ChatGptService {
     }
 
     private static void storeHistory(Long chatId, List<Message> messages) {
-        while (messages.size() >= HISTORY_LENGTH) {
+        while (messages.size() > HISTORY_LENGTH) {
             messages.remove(0);
         }
         DynamoDbChatHistoryClient.putChatSession(chatId, messages);
