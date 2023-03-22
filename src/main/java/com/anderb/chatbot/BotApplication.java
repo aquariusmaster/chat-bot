@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +40,11 @@ public class BotApplication implements RequestStreamHandler {
         }
         Long chatId = update.getMessage().getChatId();
         String prompt = update.getMessage().getText();
+        if (prompt.equals("/clear")) {
+            DynamoDbChatHistoryClient.putChatSession(chatId, Collections.emptyList());
+            sendResponse(chatId, "Message history were cleaned");
+            return;
+        }
         String response = ChatGptService.callChat(chatId, prompt);
         sendResponse(chatId, response);
     }
