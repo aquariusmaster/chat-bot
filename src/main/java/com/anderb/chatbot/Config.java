@@ -1,7 +1,5 @@
 package com.anderb.chatbot;
 
-import java.util.Optional;
-
 public class Config {
     public static final String BOT_USERNAME = System.getenv("BOT_USERNAME");
     public static final String BOT_TOKEN = System.getenv("BOT_TOKEN");

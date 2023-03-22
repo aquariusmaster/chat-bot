@@ -18,6 +18,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static com.anderb.chatbot.Config.*;
@@ -63,12 +65,14 @@ public class BotApplication implements RequestStreamHandler {
     }
 
     private void sendMessage(Long chatId, String text, String parseMode) throws TelegramApiException {
-        SendMessage sendMessage = SendMessage.builder()
-                .chatId(chatId)
-                .text(text)
-                .parseMode(parseMode)
-                .build();
-        SENDER.execute(sendMessage);
+        for (String message : divideString(text, 4095)) {
+            SendMessage sendMessage = SendMessage.builder()
+                    .chatId(chatId)
+                    .text(message)
+                    .parseMode(parseMode)
+                    .build();
+            SENDER.execute(sendMessage);
+        }
     }
 
     private boolean isValidUpdate(Update update) {
@@ -91,6 +95,16 @@ public class BotApplication implements RequestStreamHandler {
             return true;
         }
         return allowedUsers.contains(userId.toString());
+    }
+
+    public static List<String> divideString(String input, int maxLength) {
+        List<String> substrings = new ArrayList<>();
+        int inputLength = input.length();
+        for (int i = 0; i < inputLength; i += maxLength) {
+            int endIndex = Math.min(i + maxLength, inputLength);
+            substrings.add(input.substring(i, endIndex));
+        }
+        return substrings;
     }
 
 }

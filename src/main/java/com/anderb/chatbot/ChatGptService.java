@@ -2,8 +2,6 @@ package com.anderb.chatbot;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
@@ -17,9 +15,6 @@ import org.apache.http.impl.client.HttpClients;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Predicate;
 
 import static com.anderb.chatbot.Config.*;
 
@@ -41,15 +36,20 @@ public class ChatGptService {
     }
 
     private static HttpUriRequest prepareRequest(String messagePrompt) throws JsonProcessingException {
-        var message = new Message("user", messagePrompt);
-        var prompt = new ChatPrompt(AI_MODEL, List.of(message));
-        var requestJson = MAPPER.writeValueAsString(prompt);
+        String requestJson = MAPPER.createObjectNode()
+                .put("model", AI_MODEL)
+                .set("messages", MAPPER.createArrayNode()
+                        .add(MAPPER.createObjectNode()
+                                .put("role", "user")
+                                .put("content", messagePrompt)
+                        )
+                )
+                .toString();
         log.debug("Request => {}", requestJson);
-        StringEntity entity = new StringEntity(requestJson, ContentType.APPLICATION_JSON);
         return RequestBuilder.post(OPENAI_API_URL)
                 .addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + OPENAI_API_KEY)
                 .addHeader("Accept", "application/json")
-                .setEntity(entity)
+                .setEntity(new StringEntity(requestJson, ContentType.APPLICATION_JSON))
                 .build();
     }
 
@@ -58,64 +58,9 @@ public class ChatGptService {
         var responseJson = IOUtils.toString(responseEntity.getContent(), StandardCharsets.UTF_8);
         log.debug("ChatGPT <= {}", responseJson);
         if (response.getStatusLine().getStatusCode() >= 300) {
-            var errorResponse = MAPPER.readValue(responseJson, ChatGPTErrorResponse.class);
-            return errorResponse.getError().getMessage();
+            return "Error: " + MAPPER.readTree(responseJson).get("error").get("message").asText();
         }
-        var chatResponse = MAPPER.readValue(responseJson, ChatGPTResponse.class);
-        return Optional.ofNullable(chatResponse)
-                .map(ChatGPTResponse::getChoices)
-                .filter(Predicate.not(List::isEmpty))
-                .map(choices -> choices.get(0))
-                .map(Choice::getMessage)
-                .map(Message::getContent)
-                .orElseThrow(() -> new IOException("Invalid ChatGPT response"));
+        return MAPPER.readTree(responseJson).get("choices").get(0).get("message").get("content").asText();
     }
 
-    @Data
-    @AllArgsConstructor
-    private static class ChatPrompt {
-        private String model;
-        private List<Message> messages;
-
-    }
-
-    @Data
-    @AllArgsConstructor
-    private static class Message {
-
-        private String role;
-        private String content;
-
-    }
-
-    @Data
-    private static class ChatGPTResponse {
-
-        private List<Choice> choices;
-
-    }
-
-    @Data
-    private static class Choice {
-
-        private Message message;
-
-    }
-
-    @Data
-    private static class ChatGPTErrorResponse {
-
-        private ChatError error;
-
-    }
-
-    @Data
-    private static class ChatError {
-
-        private String message;
-        private String type;
-        private String param;
-        private String code;
-
-    }
 }
