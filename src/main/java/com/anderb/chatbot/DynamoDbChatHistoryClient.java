@@ -18,7 +18,7 @@ public class DynamoDbChatHistoryClient {
     private static final DynamoDB DB = new DynamoDB(DYNAMO_DB);
 
     public static List<Message> getChatMessages(Long chatId) {
-        log.debug("Getting chat#{} history", chatId);
+        log.debug("Getting history for chat #{}", chatId);
         try {
             Table table = DB.getTable(Config.DYNAMO_TABLE_NAME);
             Item chat = table.getItem("chat_id", chatId);
@@ -29,7 +29,7 @@ public class DynamoDbChatHistoryClient {
                     .map(DynamoDbChatHistoryClient::toMessage)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            log.error("Cannot get chat#{} history", chatId, e);
+            log.error("Cannot get history for chat #{}", chatId, e);
             return Collections.emptyList();
         }
     }
@@ -45,7 +45,7 @@ public class DynamoDbChatHistoryClient {
             Table table = DB.getTable(Config.DYNAMO_TABLE_NAME);
             table.putItem(item);
         } catch (Exception e) {
-            log.error("Cannot update chat#{} history", chatId, e);
+            log.error("Cannot update history for chat #{}", chatId, e);
         }
     }
 

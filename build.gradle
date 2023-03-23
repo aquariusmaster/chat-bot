@@ -4,6 +4,7 @@ plugins {
 
 group 'com.anderb.chatbot'
 version '0.1.0'
+def functionName = 'chatgpt-bot'
 
 repositories {
     mavenCentral()
@@ -33,6 +34,12 @@ tasks.register('buildZip', Zip) {
     into('lib') {
         from configurations.runtimeClasspath
     }
+    archiveFileName = "${functionName}.zip"
 }
 
 build.dependsOn buildZip
+
+tasks.register('deploy', Exec) {
+    dependsOn buildZip
+    commandLine 'aws', 'lambda', 'update-function-code', '--function-name', functionName, '--zip-file', "fileb://build/distributions/${functionName}.zip"
+}
