@@ -14,19 +14,23 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DynamoDbChatHistoryClient {
 
-    private static final AmazonDynamoDB DYNAMO_DB = AmazonDynamoDBClientBuilder.standard().build();
-    private static final DynamoDB DB = new DynamoDB(DYNAMO_DB);
+    private final DynamoDB db;
 
-    public static List<Message> getChatMessages(Long chatId) {
+    public DynamoDbChatHistoryClient() {
+        AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.standard().build();
+        db = new DynamoDB(dynamoDB);
+    }
+
+    public List<Message> getChatMessages(Long chatId) {
         log.debug("Getting history for chat #{}", chatId);
         try {
-            Table table = DB.getTable(Config.DYNAMO_TABLE_NAME);
+            Table table = db.getTable(Config.DYNAMO_TABLE_NAME);
             Item chat = table.getItem("chat_id", chatId);
             return Optional.ofNullable(chat)
                     .map(item -> item.getList("messages"))
                     .stream()
                     .flatMap(Collection::stream)
-                    .map(DynamoDbChatHistoryClient::toMessage)
+                    .map(this::toMessage)
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Cannot get history for chat #{}", chatId, e);
@@ -34,7 +38,7 @@ public class DynamoDbChatHistoryClient {
         }
     }
 
-    public static void putChatSession(Long chatId, List<Message> messages) {
+    public void putChatSession(Long chatId, List<Message> messages) {
         try {
             List<Map<String, String>> stringMessages = messages.stream()
                     .map(message -> Map.of("role", message.getRole(), "content", message.getContent()))
@@ -42,7 +46,7 @@ public class DynamoDbChatHistoryClient {
             Item item = new Item()
                     .withPrimaryKey("chat_id", chatId)
                     .withList("messages", stringMessages);
-            Table table = DB.getTable(Config.DYNAMO_TABLE_NAME);
+            Table table = db.getTable(Config.DYNAMO_TABLE_NAME);
             table.putItem(item);
         } catch (Exception e) {
             log.error("Cannot update history for chat #{}", chatId, e);
@@ -50,7 +54,7 @@ public class DynamoDbChatHistoryClient {
     }
 
     @SuppressWarnings("unchecked")
-    private static Message toMessage(Object value) {
+    private Message toMessage(Object value) {
         Map<String, String> map = (Map<String, String>) value;
         return new Message(map.get("role"), map.get("content"));
     }

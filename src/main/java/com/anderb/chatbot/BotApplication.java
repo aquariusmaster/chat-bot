@@ -28,8 +28,17 @@ import static com.anderb.chatbot.Config.*;
 @Slf4j
 public class BotApplication implements RequestStreamHandler {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final AbsSender SENDER = new ChatBot(BOT_USERNAME, BOT_TOKEN, BOT_URL);
+    private final ObjectMapper objectMapper;
+    private final AbsSender bot;
+    private final DynamoDbChatHistoryClient chatHistoryClient;
+    private final ChatGptService chatGptService;
+
+    public BotApplication() {
+        objectMapper = new ObjectMapper();
+        bot = new ChatBot(BOT_USERNAME, BOT_TOKEN, BOT_URL);
+        chatHistoryClient = new DynamoDbChatHistoryClient();
+        chatGptService = new ChatGptService(objectMapper, chatHistoryClient);
+    }
 
     @Override
     public void handleRequest(InputStream input, OutputStream output, Context context) {
@@ -41,11 +50,11 @@ public class BotApplication implements RequestStreamHandler {
         Long chatId = update.getMessage().getChatId();
         String prompt = update.getMessage().getText();
         if (prompt.equals("/clear")) {
-            DynamoDbChatHistoryClient.putChatSession(chatId, Collections.emptyList());
+            chatHistoryClient.putChatSession(chatId, Collections.emptyList());
             sendResponse(chatId, "Message history were cleaned");
             return;
         }
-        String response = ChatGptService.callChat(chatId, prompt);
+        String response = chatGptService.callChat(chatId, prompt);
         sendResponse(chatId, response);
     }
 
@@ -53,7 +62,7 @@ public class BotApplication implements RequestStreamHandler {
         try {
             String inputJson = IOUtils.toString(input, StandardCharsets.UTF_8);
             log.debug("Update: {}", inputJson);
-            return MAPPER.readValue(inputJson, Update.class);
+            return objectMapper.readValue(inputJson, Update.class);
         } catch (Exception e) {
             log.debug("Exception while parsing: {}", e.getMessage());
             throw new RuntimeException("Failed to parse update!", e);
@@ -77,7 +86,7 @@ public class BotApplication implements RequestStreamHandler {
                     .text(message)
                     .parseMode(parseMode)
                     .build();
-            SENDER.execute(sendMessage);
+            bot.execute(sendMessage);
         }
     }
 
