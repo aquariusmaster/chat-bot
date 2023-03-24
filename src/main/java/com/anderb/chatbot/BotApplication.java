@@ -73,7 +73,7 @@ public class BotApplication implements RequestStreamHandler {
     private void sendResponse(Long chatId, String text) {
         try {
             sendMessage(chatId, text.replaceAll("([_\\[*])", "\\\\$1"), ParseMode.MARKDOWN);
-        } catch (TelegramApiException e) {
+        } catch (Exception e) {
             log.debug("Cannot send message in markdown: {}", e.getMessage());
             sendMessage(chatId, text, null);
         }
@@ -112,7 +112,7 @@ public class BotApplication implements RequestStreamHandler {
         return allowedUsers.contains(userId.toString());
     }
 
-    public static List<String> divideString(String input, int maxLength) {
+    public List<String> divideString(String input, int maxLength) {
         List<String> substrings = new ArrayList<>();
         int inputLength = input.length();
         for (int i = 0; i < inputLength; i += maxLength) {
