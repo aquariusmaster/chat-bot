@@ -6,9 +6,9 @@ Build:
 ./gradlew clean build
 ```
 
-Deploy to Aws Lambda:
+Deploy to AWS Lambda:
 ```bash
-./gradlew clean deploy
+./gradlew deploy
 ```
 Environment variables:
 ```
@@ -26,7 +26,7 @@ HISTORY_LENGTH=8
 Create a Telegram bot:
 https://core.telegram.org/bots/features#botfather
 
-Register bot after AWS Lambda was configured:
+Register bot after [AWS Lambda](AWS-SETUP.md) was configured:
 ```bash
 curl -X POST "https://api.telegram.org/bot-token/setWebhook?url=aws_url"
 ```
