@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-public class BotApplication implements RequestHandler<Update, String> {
+public class BotApplication implements RequestHandler<Update, Void> {
 
     private static final int MESSAGE_SIZE_LIMIT = 4095;
 
@@ -31,7 +31,7 @@ public class BotApplication implements RequestHandler<Update, String> {
     private final ChatGptService chatGptService = new ChatGptService(new ObjectMapper(), chatHistoryClient);
 
     @Override
-    public String handleRequest(Update update, Context context) {
+    public Void handleRequest(Update update, Context context) {
         handleRequest(update);
         return null;
     }
