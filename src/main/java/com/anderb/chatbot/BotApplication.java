@@ -28,6 +28,8 @@ import static com.anderb.chatbot.Config.*;
 @Slf4j
 public class BotApplication implements RequestStreamHandler {
 
+    private static final int MESSAGE_SIZE_LIMIT = 4095;
+
     private final ObjectMapper objectMapper;
     private final AbsSender bot;
     private final DynamoDbChatHistoryClient chatHistoryClient;
@@ -51,7 +53,7 @@ public class BotApplication implements RequestStreamHandler {
         String prompt = update.getMessage().getText();
         if (prompt.equals("/clear")) {
             chatHistoryClient.putChatSession(chatId, Collections.emptyList());
-            sendResponse(chatId, "Message history were cleaned");
+            sendResponse(chatId, "Message history was cleaned");
             return;
         }
         String response = chatGptService.callChat(chatId, prompt);
@@ -80,7 +82,7 @@ public class BotApplication implements RequestStreamHandler {
     }
 
     private void sendMessage(Long chatId, String text, String parseMode) throws TelegramApiException {
-        for (String message : divideString(text, 4095)) {
+        for (String message : divideString(text, MESSAGE_SIZE_LIMIT)) {
             SendMessage sendMessage = SendMessage.builder()
                     .chatId(chatId)
                     .text(message)

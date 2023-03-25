@@ -23,7 +23,10 @@ JAVA_TOOL_OPTIONS=-Dorg.slf4j.simpleLogger.defaultLogLevel=debug
 DYNAMO_TABLE_NAME=chat-history
 HISTORY_LENGTH=8
 ```
-Register bot
+Create a Telegram bot:
+https://core.telegram.org/bots/features#botfather
+
+Register bot after AWS Lambda was configured:
 ```bash
 curl -X POST "https://api.telegram.org/bot-token/setWebhook?url=aws_url"
 ```
