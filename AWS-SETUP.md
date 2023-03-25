@@ -61,6 +61,7 @@ aws lambda create-function --function-name chatgpt-bot \
   --handler com.anderb.chatbot.BotApplication::handleRequest \
   --zip-file fileb://build/distribution/chatgpt-bot.zip \
   --role ARN_OF_THE_ROLE \
+  --timeout 300 \
   --environment 'Variables={AI_MODEL=gpt-3.5-turbo, OPENAI_API_KEY=sk-xxx, ...}'
 ```
 Replace ARN_OF_THE_ROLE with the Arn of the role you created.
