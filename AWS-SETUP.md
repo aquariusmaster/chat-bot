@@ -56,7 +56,12 @@ aws iam put-role-policy --role-name lambda-cloudwatch-dynamodb-role --policy-nam
 ```
 ### Create the Lambda function using the AWS CLI:
 ```bash
-aws lambda create-function --function-name chatgpt-bot --runtime java11 --handler com.anderb.chatbot.BotApplication::handleRequest --zip-file fileb://build/distribution/chatgpt-bot.zip --role ARN_OF_THE_ROLE
+aws lambda create-function --function-name chatgpt-bot \
+  --runtime java11 \
+  --handler com.anderb.chatbot.BotApplication::handleRequest \
+  --zip-file fileb://build/distribution/chatgpt-bot.zip \
+  --role ARN_OF_THE_ROLE \
+  --environment 'Variables={AI_MODEL=gpt-3.5-turbo, OPENAI_API_KEY=sk-xxx, ...}'
 ```
 Replace ARN_OF_THE_ROLE with the Arn of the role you created.
 
