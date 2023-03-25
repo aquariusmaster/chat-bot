@@ -1,4 +1,4 @@
-# chat-bot
+# Telegram ChatGPT bot on AWS Lambda
 
 Build:
 
