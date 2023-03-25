@@ -10,8 +10,6 @@ Deploy to Aws Lambda:
 ```bash
 ./gradlew clean deploy
 ```
-Download binaries in zip archive: `build/distributions/chatgpt-bot.zip`
-
 Environment variables:
 ```
 AI_MODEL=gpt-3.5-turbo
@@ -24,4 +22,8 @@ BOT_USERNAME=@BotName
 JAVA_TOOL_OPTIONS=-Dorg.slf4j.simpleLogger.defaultLogLevel=debug
 DYNAMO_TABLE_NAME=chat-history
 HISTORY_LENGTH=8
+```
+Register bot
+```bash
+curl -X POST "https://api.telegram.org/bot-token/setWebhook?url=aws_url"
 ```
