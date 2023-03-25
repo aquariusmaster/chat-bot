@@ -1,12 +1,13 @@
 package com.anderb.chatbot;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.telegram.telegrambots.bots.TelegramWebhookBot;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -15,36 +16,28 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static com.anderb.chatbot.Config.*;
-
 @Slf4j
-public class BotApplication implements RequestStreamHandler {
+public class BotApplication implements RequestHandler<Update, String> {
 
     private static final int MESSAGE_SIZE_LIMIT = 4095;
 
-    private final ObjectMapper objectMapper;
-    private final AbsSender bot;
-    private final DynamoDbChatHistoryClient chatHistoryClient;
-    private final ChatGptService chatGptService;
-
-    public BotApplication() {
-        objectMapper = new ObjectMapper();
-        bot = new ChatBot(BOT_USERNAME, BOT_TOKEN, BOT_URL);
-        chatHistoryClient = new DynamoDbChatHistoryClient();
-        chatGptService = new ChatGptService(objectMapper, chatHistoryClient);
-    }
+    private final AbsSender bot = initBot();
+    private final DynamoDbChatHistoryClient chatHistoryClient = new DynamoDbChatHistoryClient();
+    private final ChatGptService chatGptService = new ChatGptService(new ObjectMapper(), chatHistoryClient);
 
     @Override
-    public void handleRequest(InputStream input, OutputStream output, Context context) {
-        Update update = getUpdate(input);
+    public String handleRequest(Update update, Context context) {
+        handleRequest(update);
+        return null;
+    }
+
+    public void handleRequest(Update update) {
+        log.debug("Update: {}", update);
         if (!isValidUpdate(update)) {
             log.debug("Invalid update request");
             return;
@@ -58,17 +51,6 @@ public class BotApplication implements RequestStreamHandler {
         }
         String response = chatGptService.callChat(chatId, prompt);
         sendResponse(chatId, response);
-    }
-
-    private Update getUpdate(InputStream input) {
-        try {
-            String inputJson = IOUtils.toString(input, StandardCharsets.UTF_8);
-            log.debug("Update: {}", inputJson);
-            return objectMapper.readValue(inputJson, Update.class);
-        } catch (Exception e) {
-            log.debug("Exception while parsing: {}", e.getMessage());
-            throw new RuntimeException("Failed to parse update!", e);
-        }
     }
 
     @SneakyThrows
@@ -104,7 +86,7 @@ public class BotApplication implements RequestStreamHandler {
     }
 
     private boolean isAllowedUser(Long userId) {
-        String allowedUsers = ALLOWED_USERS;
+        String allowedUsers = Config.ALLOWED_USERS;
         if (allowedUsers == null || allowedUsers.isBlank()) {
             return false;
         }
@@ -122,6 +104,26 @@ public class BotApplication implements RequestStreamHandler {
             substrings.add(input.substring(i, endIndex));
         }
         return substrings;
+    }
+
+    private AbsSender initBot() {
+        return new TelegramWebhookBot(Config.BOT_TOKEN) {
+
+            @Override
+            public String getBotUsername() {
+                return Config.BOT_USERNAME;
+            }
+
+            @Override
+            public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
+                return null;
+            }
+
+            @Override
+            public String getBotPath() {
+                return Config.BOT_URL;
+            }
+        };
     }
 
 }

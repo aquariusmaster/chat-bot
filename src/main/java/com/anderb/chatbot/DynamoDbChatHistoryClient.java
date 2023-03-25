@@ -15,16 +15,18 @@ import java.util.stream.Collectors;
 public class DynamoDbChatHistoryClient {
 
     private final DynamoDB db;
+    private final String historyTableName;
 
     public DynamoDbChatHistoryClient() {
         AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.standard().build();
         db = new DynamoDB(dynamoDB);
+        historyTableName = Config.DYNAMO_TABLE_NAME;
     }
 
     public List<Message> getChatMessages(Long chatId) {
         log.debug("Getting history for chat #{}", chatId);
         try {
-            Table table = db.getTable(Config.DYNAMO_TABLE_NAME);
+            Table table = db.getTable(historyTableName);
             Item chat = table.getItem("chat_id", chatId);
             return Optional.ofNullable(chat)
                     .map(item -> item.getList("messages"))
@@ -46,7 +48,7 @@ public class DynamoDbChatHistoryClient {
             Item item = new Item()
                     .withPrimaryKey("chat_id", chatId)
                     .withList("messages", stringMessages);
-            Table table = db.getTable(Config.DYNAMO_TABLE_NAME);
+            Table table = db.getTable(historyTableName);
             table.putItem(item);
         } catch (Exception e) {
             log.error("Cannot update history for chat #{}", chatId, e);

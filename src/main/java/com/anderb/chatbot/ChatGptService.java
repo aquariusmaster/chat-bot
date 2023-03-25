@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static com.anderb.chatbot.Config.*;
-
 @Slf4j
 @AllArgsConstructor
 public class ChatGptService {
@@ -52,18 +50,18 @@ public class ChatGptService {
 
     private void storeHistory(Long chatId, List<Message> messages) {
         int size = messages.size();
-        if (size > HISTORY_LENGTH) {
-            messages = messages.subList(size - HISTORY_LENGTH, size);
+        if (size > Config.HISTORY_LENGTH) {
+            messages = messages.subList(size - Config.HISTORY_LENGTH, size);
         }
         chatHistoryClient.putChatSession(chatId, messages);
     }
 
     private HttpUriRequest prepareRequest(List<Message> messages) throws JsonProcessingException {
-        var prompt = new ChatPrompt(AI_MODEL, messages);
+        var prompt = new ChatPrompt(Config.AI_MODEL, messages);
         var requestJson = mapper.writeValueAsString(prompt);
         log.debug("Request => {}", requestJson);
-        return RequestBuilder.post(OPENAI_API_URL)
-                .addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + OPENAI_API_KEY)
+        return RequestBuilder.post(Config.OPENAI_API_URL)
+                .addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + Config.OPENAI_API_KEY)
                 .addHeader("Accept", "application/json")
                 .setEntity(new StringEntity(requestJson, ContentType.APPLICATION_JSON))
                 .build();
