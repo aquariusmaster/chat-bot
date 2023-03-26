@@ -95,7 +95,8 @@ Create a JSON file named env-variables.json with the following content:
     "BOT_USERNAME": "@BotName",
     "JAVA_TOOL_OPTIONS": "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug",
     "DYNAMO_TABLE_NAME": "chat-history",
-    "HISTORY_LENGTH": "8"
+    "HISTORY_LENGTH": "8",
+    "SESSION_MAX_LIFETIME": "60"
   }
 }
 ```
@@ -110,7 +111,7 @@ aws lambda create-function --function-name chatgpt-bot \
   --role ARN_OF_THE_ROLE \
   --timeout 300 \
   --architectures arm64 \
-  --memory-size 256 \
+  --memory-size 512 \
   --environment file://aws/env-variables.json
 ```
 Replace ARN_OF_THE_ROLE with the Arn of the role you created. Take note of the FunctionArn value in the response.

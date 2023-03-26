@@ -22,6 +22,7 @@ BOT_USERNAME=@BotName
 JAVA_TOOL_OPTIONS=-Dorg.slf4j.simpleLogger.defaultLogLevel=debug
 DYNAMO_TABLE_NAME=chat-history
 HISTORY_LENGTH=8
+SESSION_MAX_LIFETIME=60
 ```
 Create a Telegram bot:
 https://core.telegram.org/bots/features#botfather

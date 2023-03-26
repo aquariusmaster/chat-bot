@@ -8,6 +8,7 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.anderb.chatbot.model.Message;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,8 +28,8 @@ public class DynamoDbChatHistoryClient {
         log.debug("Getting history for chat #{}", chatId);
         try {
             Table table = db.getTable(historyTableName);
-            Item chat = table.getItem("chat_id", chatId);
-            return Optional.ofNullable(chat)
+            return Optional.ofNullable(table.getItem("chat_id", chatId))
+                    .filter(this::isSessionNotExpired)
                     .map(item -> item.getList("messages"))
                     .stream()
                     .flatMap(Collection::stream)
@@ -36,7 +37,7 @@ public class DynamoDbChatHistoryClient {
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Cannot get history for chat #{}", chatId, e);
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
     }
 
@@ -47,7 +48,8 @@ public class DynamoDbChatHistoryClient {
                     .collect(Collectors.toList());
             Item item = new Item()
                     .withPrimaryKey("chat_id", chatId)
-                    .withList("messages", stringMessages);
+                    .withList("messages", stringMessages)
+                    .withString("last_interaction", LocalDateTime.now().toString());
             Table table = db.getTable(historyTableName);
             table.putItem(item);
         } catch (Exception e) {
@@ -59,6 +61,12 @@ public class DynamoDbChatHistoryClient {
     private Message toMessage(Object value) {
         Map<String, String> map = (Map<String, String>) value;
         return new Message(map.get("role"), map.get("content"));
+    }
+
+    private boolean isSessionNotExpired(Item item) {
+        LocalDateTime minutesAgo = LocalDateTime.now().minusMinutes(Config.SESSION_MAX_LIFETIME);
+        LocalDateTime lastInteraction = LocalDateTime.parse(item.getString("last_interaction"));
+        return lastInteraction.isAfter(minutesAgo);
     }
 
 }
