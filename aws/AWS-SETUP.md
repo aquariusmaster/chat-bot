@@ -8,7 +8,7 @@ aws dynamodb create-table \
     --billing-mode PAY_PER_REQUEST
 ```
 ### Create a role
-Create a trust policy for the Lambda service in a file named lambda-trust-policy.json:
+1. Create a trust policy for the Lambda service in a file named lambda-trust-policy.json:
 ```json
 {
   "Version": "2012-10-17",
@@ -23,13 +23,13 @@ Create a trust policy for the Lambda service in a file named lambda-trust-policy
   ]
 }
 ```
-Create the IAM role using the AWS CLI and the trust policy:
+2. Create the IAM role using the AWS CLI and the trust policy:
 ```bash
 aws iam create-role --role-name lambda-cloudwatch-dynamodb-role --assume-role-policy-document file://aws/lambda-trust-policy.json
 ```
 Note the Arn of the newly created role in the output. You'll need it later when creating the Lambda function.
 
-Create a custom inline policy with the specified CloudWatch and DynamoDB permissions. Save the policy in a file named custom-policy.json:
+3. Create a custom inline policy with the specified CloudWatch and DynamoDB permissions. Save the policy in a file named custom-policy.json:
 ```json
 {
   "Version": "2012-10-17",
@@ -54,35 +54,36 @@ Create a custom inline policy with the specified CloudWatch and DynamoDB permiss
   ]
 }
 ```
-Add the custom inline policy to the IAM role using the AWS CLI:
+4. dd the custom inline policy to the IAM role using the AWS CLI:
 ```bash
 aws iam put-role-policy --role-name lambda-cloudwatch-dynamodb-role --policy-name CustomCloudWatchDynamoDBPolicy --policy-document file://aws/custom-policy.json
 ```
 ### Create an API Gateway:
+1. Create a REST API:
 ```bash
 aws apigateway create-rest-api --name chatgpt-bot-api
 ```
 Note the id of the newly created API in the output. You'll need it later when creating the resource and method.
-Get the root resource ID:
+2. Get the root resource ID:
 ```bash
 aws apigateway get-resources --rest-api-id YOUR_API_ID
 ```
 Replace YOUR_API_ID with the API ID you obtained in the previous step. In the response, look for the id value of the root resource ("/"). This is your root resource ID (YOUR_ROOT_RESOURCE_ID).
 
-Create a resource in the API Gateway:
+3. Create a resource in the API Gateway:
 ```bash
 aws apigateway create-resource --rest-api-id YOUR_API_ID --parent-id YOUR_ROOT_RESOURCE_ID --path-part my-function
 ```
 Replace YOUR_API_ID and YOUR_ROOT_RESOURCE_ID with the values you obtained earlier. Take note of the id value in the response. This is your new resource ID (YOUR_RESOURCE_ID).
 
-Create a method (e.g., POST) for the new resource::
+4. Create a method (e.g., POST) for the new resource::
 ```bash
 aws apigateway put-method --rest-api-id YOUR_API_ID --resource-id YOUR_RESOURCE_ID --http-method POST --authorization-type NONE
 ```
 Replace YOUR_API_ID with the API id and YOUR_RESOURCE_ID with the resource id you obtained previously.
 
 ### Create the Lambda function using the AWS CLI:
-Create a JSON file named env-variables.json with the following content:
+1. Create a JSON file named env-variables.json with the following content:
 ```json
 {
   "Variables": {
@@ -102,7 +103,7 @@ Create a JSON file named env-variables.json with the following content:
 ```
 Replace placeholders with the appropriate values for your configuration. We will get BOT_URL later for now you can leave it empty("").
 
-Create lambda function:
+2. Create lambda function:
 ```bash
 aws lambda create-function --function-name chatgpt-bot \
   --runtime java11 \
@@ -117,7 +118,7 @@ aws lambda create-function --function-name chatgpt-bot \
 Replace ARN_OF_THE_ROLE with the Arn of the role you created. Take note of the FunctionArn value in the response.
 
 ### Integrate the Lambda function with the API Gateway method
-Define the integration configuration JSON for your method. For example, to integrate your API Gateway with a Lambda function, the JSON configuration would look like this:
+1. Define the integration configuration JSON for your method. For example, to integrate your API Gateway with a Lambda function, the JSON configuration would look like this:
 ```json
 {
   "type": "AWS",
@@ -131,7 +132,7 @@ Define the integration configuration JSON for your method. For example, to integ
   }
 }
 ```
-Create a Lambda function integration for the method using the AWS CLI:
+2. Create a Lambda function integration for the method using the AWS CLI:
 ```bash
 aws apigateway put-integration \
   --rest-api-id YOUR_API_ID \
@@ -139,7 +140,7 @@ aws apigateway put-integration \
   --integration-http-method POST \
   --cli-input-json file://aws/integration.json.json
 ```
-Run the following AWS CLI command to add an integration response with status code 200:
+3. Run the following AWS CLI command to add an integration response with status code 200:
 ```bash
 aws apigateway put-integration-response \
   --rest-api-id YOUR_API_ID \
@@ -147,13 +148,12 @@ aws apigateway put-integration-response \
   --http-method POST \
   --status-code 200
 ```
-After adding the integration response, you'll need to redeploy the API for the changes to take effect:
+4. After adding the integration response, you'll need to redeploy the API for the changes to take effect:
 ```bash
 aws apigateway create-deployment --rest-api-id YOUR_API_ID --stage-name YOUR_STAGE_NAME
 ```
-Add the permission using the AWS CLI:
+5. Add the permission using the AWS CLI:
 ```bash
-
 aws lambda add-permission \
   --function-name YOUR_FUNCTION_NAME \
   --statement-id apigateway-invoke \
@@ -162,15 +162,15 @@ aws lambda add-permission \
   --source-arn "arn:aws:execute-api:YOUR_REGION:YOUR_ACCOUNT_ID:YOUR_API_ID/*/YOUR_HTTP_METHOD/YOUR_RESOURCE_PATH"
 ```
 ### Update `BOT_URL` env
-Get API Gateway endpoint URL:
+1. Get API Gateway endpoint URL:
 ```bash
 aws apigateway get-stages --rest-api-id YOUR_API_ID
 ```
-Now you can construct the API Gateway endpoint URL using the API ID, region, and stage name. The endpoint URL format is:
+2. Now you can construct the API Gateway endpoint URL using the API ID, region, and stage name. The endpoint URL format is:
 ```bash
 https://{api-id}.execute-api.{region}.amazonaws.com/{stage}/{my-function}
 ```
-Put it in env-variables.json BOT_URL and update the Lambda function configuration with the new environment variables:
+3. Put it in env-variables.json BOT_URL and update the Lambda function configuration with the new environment variables:
 ```bash
 aws lambda update-function-configuration \
 --function-name YOUR_FUNCTION_NAME \
