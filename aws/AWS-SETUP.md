@@ -1,4 +1,12 @@
 !!! THIS IS AN EXPERIMENTAL CONFIG
+### Create DynamoDB table
+```bash
+aws dynamodb create-table \
+    --table-name chat-history \
+    --attribute-definitions AttributeName=chat_id,AttributeType=N \
+    --key-schema AttributeName=chat_id,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST
+```
 ### Create a role
 Create a trust policy for the Lambda service in a file named lambda-trust-policy.json:
 ```json
@@ -41,7 +49,7 @@ Create a custom inline policy with the specified CloudWatch and DynamoDB permiss
         "dynamodb:PutItem",
         "dynamodb:GetItem"
       ],
-      "Resource": "arn:aws:dynamodb:*:*:table/*"
+      "Resource": "arn:aws:dynamodb:*:*:table/chat-history"
     }
   ]
 }
@@ -49,14 +57,6 @@ Create a custom inline policy with the specified CloudWatch and DynamoDB permiss
 Add the custom inline policy to the IAM role using the AWS CLI:
 ```bash
 aws iam put-role-policy --role-name lambda-cloudwatch-dynamodb-role --policy-name CustomCloudWatchDynamoDBPolicy --policy-document file://aws/custom-policy.json
-```
-### Create DynamoDB table
-```bash
-aws dynamodb create-table \
-    --table-name chat-history \
-    --attribute-definitions AttributeName=chat_id,AttributeType=N \
-    --key-schema AttributeName=chat_id,KeyType=HASH \
-    --billing-mode PAY_PER_REQUEST
 ```
 ### Create an API Gateway:
 ```bash
