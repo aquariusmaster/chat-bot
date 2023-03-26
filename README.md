@@ -26,7 +26,9 @@ HISTORY_LENGTH=8
 Create a Telegram bot:
 https://core.telegram.org/bots/features#botfather
 
-Register bot after [AWS Lambda](AWS-SETUP.md) was configured:
+Create AWS resources: [AWS Lambda](aws/AWS-SETUP.md)
+
+Register bot:
 ```bash
-curl -X POST "https://api.telegram.org/bot-token/setWebhook?url=aws_url"
+curl -X POST "https://api.telegram.org/bot{BOT_TOKEN}/setWebhook?url={BOT_URL}"
 ```

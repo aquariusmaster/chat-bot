@@ -1,3 +1,5 @@
 .gradle/
 .idea/
 build/
+aws/
+!aws/AWS-SETUP.md
