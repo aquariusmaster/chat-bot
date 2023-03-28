@@ -64,7 +64,11 @@ public class DynamoDbChatHistoryClient {
     }
 
     private boolean isSessionNotExpired(Item item) {
-        LocalDateTime minutesAgo = LocalDateTime.now().minusMinutes(Config.SESSION_MAX_LIFETIME);
+        int sessionMaxLifetime = Config.SESSION_MAX_LIFETIME;
+        if (sessionMaxLifetime == -1) {
+            return true;
+        }
+        LocalDateTime minutesAgo = LocalDateTime.now().minusMinutes(sessionMaxLifetime);
         LocalDateTime lastInteraction = LocalDateTime.parse(item.getString("last_interaction"));
         return lastInteraction.isAfter(minutesAgo);
     }

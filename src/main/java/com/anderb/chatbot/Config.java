@@ -11,13 +11,13 @@ public class Config {
     public static final String OPENAI_API_URL = System.getenv("OPENAI_API_URL");
     public static final String OPENAI_API_KEY = System.getenv("OPENAI_API_KEY");
     public static final String DYNAMO_TABLE_NAME = System.getenv("DYNAMO_TABLE_NAME");
-    public static final int HISTORY_LENGTH = getAsInt("HISTORY_LENGTH");
-    public static final int SESSION_MAX_LIFETIME = getAsInt("SESSION_MAX_LIFETIME");
+    public static final int HISTORY_LENGTH = getAsInt("HISTORY_LENGTH", 0);
+    public static final int SESSION_MAX_LIFETIME = getAsInt("SESSION_MAX_LIFETIME", -1);
 
-    private static int getAsInt(String varName) {
+    private static int getAsInt(String varName, int defaultValue) {
         return Optional.ofNullable(System.getenv(varName))
                 .map(Integer::valueOf)
-                .orElse(0);
+                .orElse(defaultValue);
     }
 
 }
