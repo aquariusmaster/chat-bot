@@ -27,7 +27,7 @@ SESSION_MAX_LIFETIME=60
 Create a Telegram bot:
 https://core.telegram.org/bots/features#botfather
 
-Create AWS resources: [AWS Lambda](aws/AWS-SETUP.md)
+Create AWS resources by CloudFormation template: [cloudformation_template.yaml](aws/cloudformation_template.yaml) or [manually](aws/AWS-SETUP.md)
 
 Register bot:
 ```bash

@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  BotName:
+    Type: String
+    Default: chatgpt-bot
+  FunctionHandler:
+    Type: String
+    Default: 'com.anderb.chatbot.BotApplication::handleRequest'
+  OpenAIApiKey:
+    Type: String
+    NoEcho: true
+  AllowedUsers:
+    Type: String
+    Description: Comma separated whitelisted telegram user ids
+  BotToken:
+    Type: String
+    NoEcho: true
+    Description: 'Example: 1234567890:xxxxxxxxx'
+  BotUsername:
+    Type: String
+    Description: Must start with @
+  S3Bucket:
+    Type: String
+    Description: S3 bucket with function archive
+  S3Key:
+    Type: String
+    Description: Function archive name
+
+Resources:
+  ChatHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${BotName}-history'
+      AttributeDefinitions:
+        - AttributeName: chat_id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: chat_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ChatBotCloudWatchDynamoDBPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BotName}-history'
+
+  ChatGPTBotFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${BotName}-function'
+      Description: 'Lambda backend for Telegram Bot'
+      Runtime: java11
+      Handler: !Ref FunctionHandler
+      Code:
+        S3Bucket: !Ref S3Bucket
+        S3Key: !Ref S3Key
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          AI_MODEL: gpt-3.5-turbo
+          OPENAI_API_KEY: !Ref OpenAIApiKey
+          OPENAI_API_URL: https://api.openai.com/v1/chat/completions
+          ALLOWED_USERS: !Ref AllowedUsers
+          BOT_TOKEN: !Ref BotToken
+          BOT_URL: !Sub 'https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/prod/${BotName}'
+          BOT_USERNAME: !Ref BotUsername
+          JAVA_TOOL_OPTIONS: -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
+          DYNAMO_TABLE_NAME: !Sub '${BotName}-history'
+          HISTORY_LENGTH: 8
+          SESSION_MAX_LIFETIME: 120
+      Architectures:
+        - arm64
+
+  MyApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub '${BotName}-api'
+      Description: !Sub 'API Gateway for ${BotName}'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  MyFunctionResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApi
+      ParentId: !GetAtt MyApi.RootResourceId
+      PathPart: !Ref BotName
+
+  MyFunctionMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MyApi
+      ResourceId: !Ref MyFunctionResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ChatGPTBotFunction.Arn}/invocations'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestParameters:
+          integration.request.header.X-Amz-Invocation-Type: "'Event'"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''
+        ContentHandling: CONVERT_TO_TEXT
+      MethodResponses:
+        - StatusCode: 200
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: MyFunctionMethod
+    Properties:
+      RestApiId: !Ref MyApi
+      StageName: prod
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ChatGPTBotFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MyApi}/*/POST/${BotName}'
+
+Outputs:
+  TableNameOutput:
+    Description: DynamoDB table name
+    Value: !Sub '${BotName}-history'
+  FunctionNameOutput:
+    Description: Lambda Function name
+    Value: !Sub '${BotName}-function'
+  RestApiNameOutput:
+    Description: ApiGateway RestApi name
+    Value: !Sub '${BotName}-api'
+  ApiEndpointUrl:
+    Description: The URL of the API endpoint
+    Value: !Sub 'https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/prod/${BotName}'
