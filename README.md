@@ -1,5 +1,7 @@
 # Telegram ChatGPT bot on AWS Lambda
 
+![Chat bot - AWS](https://user-images.githubusercontent.com/6018601/228943317-8a1ff9b4-b0d5-49e3-9d88-e0ceef84c52b.png)
+
 Build:
 
 ```bash
