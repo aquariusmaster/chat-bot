@@ -4,7 +4,12 @@ plugins {
 
 group 'com.anderb.chatbot'
 version '0.1.0'
-def functionName = 'chatgpt-bot'
+
+ext {
+    functionName = 'chatgpt-bot'
+    bucketName = project.findProperty('bucket')
+    objectKey = project.findProperty('key') ?: "${functionName}.zip"
+}
 
 repositories {
     mavenCentral()
@@ -42,4 +47,12 @@ build.dependsOn buildZip
 tasks.register('deploy', Exec) {
     dependsOn buildZip
     commandLine 'aws', 'lambda', 'update-function-code', '--function-name', functionName, '--zip-file', "fileb://build/distributions/${functionName}.zip"
+}
+
+tasks.register('upload', Exec) {
+    dependsOn build
+    doFirst {
+        println "Executing command: aws s3 cp build/distributions/${functionName}.zip s3://${bucketName}/${objectKey}"
+    }
+    commandLine 'aws', 's3', 'cp', "build/distributions/${functionName}.zip", "s3://${bucketName}/${objectKey}"
 }
