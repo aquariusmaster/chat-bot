@@ -4,6 +4,8 @@ import com.anderb.chatbot.model.ChatPrompt;
 import com.anderb.chatbot.model.ChatResponse;
 import com.anderb.chatbot.model.ErrorMessage;
 import com.anderb.chatbot.model.Message;
+import com.anderb.chatbot.model.functions.Function;
+import com.anderb.chatbot.model.functions.FunctionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -28,14 +30,17 @@ public class ChatGptService {
 
     private final ObjectMapper mapper;
     private final DynamoDbChatHistoryClient chatHistoryClient;
+    private final FunctionService functionService;
 
     public String callChat(Long chatId, String prompt) {
         List<Message> messages = chatHistoryClient.getChatMessages(chatId);
         messages.add(new Message("user", prompt));
+        List<Function> functions = functionService.getFunctions();
         try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
-            var httpPost = prepareRequest(messages);
+            var httpPost = prepareRequest(messages, functions);
             var response = httpclient.execute(httpPost);
-            Message message = parseResponse(response);
+            ChatResponse chatResponse = parseResponse(response);
+            Message message = chatResponse.getChoices().get(0).getMessage();
             if (!(message instanceof ErrorMessage)) {
                 messages.add(message);
                 storeHistory(chatId, messages);
@@ -56,8 +61,8 @@ public class ChatGptService {
         chatHistoryClient.putChatSession(chatId, messages);
     }
 
-    private HttpUriRequest prepareRequest(List<Message> messages) throws JsonProcessingException {
-        var prompt = new ChatPrompt(Config.AI_MODEL, messages);
+    private HttpUriRequest prepareRequest(List<Message> messages, List<Function> functions) throws JsonProcessingException {
+        var prompt = new ChatPrompt(Config.AI_MODEL, messages, functions);
         var requestJson = mapper.writeValueAsString(prompt);
         log.debug("Request => {}", requestJson);
         return RequestBuilder.post(Config.OPENAI_API_URL)
@@ -67,16 +72,11 @@ public class ChatGptService {
                 .build();
     }
 
-    private Message parseResponse(CloseableHttpResponse response) throws IOException {
+    private ChatResponse parseResponse(CloseableHttpResponse response) throws IOException {
         var responseEntity = response.getEntity();
         var responseJson = IOUtils.toString(responseEntity.getContent(), StandardCharsets.UTF_8);
         log.debug("ChatGPT <= {}", responseJson);
-        if (response.getStatusLine().getStatusCode() >= 300) {
-            var error = "Error: " + mapper.readTree(responseJson).get("error").get("message").asText();
-            return new ErrorMessage(error);
-        }
-        ChatResponse chatResponse = mapper.readValue(responseJson, ChatResponse.class);
-        return chatResponse.getChoices().get(0).getMessage();
+        return mapper.readValue(responseJson, ChatResponse.class);
     }
 
 }

@@ -3,6 +3,7 @@ package com.anderb.chatbot;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +29,9 @@ public class BotApplication implements RequestHandler<Update, Void> {
 
     private final AbsSender bot = initBot();
     private final DynamoDbChatHistoryClient chatHistoryClient = new DynamoDbChatHistoryClient();
-    private final ChatGptService chatGptService = new ChatGptService(new ObjectMapper(), chatHistoryClient);
+    private final ObjectMapper objectMapper = getObjectMapper();
+
+    private final ChatGptService chatGptService = new ChatGptService(objectMapper, chatHistoryClient);
 
     @Override
     public Void handleRequest(Update update, Context context) {
@@ -124,6 +127,12 @@ public class BotApplication implements RequestHandler<Update, Void> {
                 return Config.BOT_URL;
             }
         };
+    }
+
+    private ObjectMapper getObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return mapper;
     }
 
 }
