@@ -6,7 +6,7 @@ group 'com.anderb.chatbot'
 version '0.1.0'
 
 ext {
-    functionName = 'chatgpt-bot'
+    functionName = 'chatgpt-bot-function'
     bucketName = project.findProperty('bucket')
     objectKey = project.findProperty('key') ?: "${functionName}.zip"
 }
@@ -17,16 +17,16 @@ repositories {
 
 dependencies {
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.1'
-    implementation 'com.amazonaws:aws-lambda-java-events:3.11.0'
-    implementation 'com.amazonaws:aws-java-sdk-dynamodb:1.12.131'
-    implementation 'org.slf4j:slf4j-api:2.0.7'
-    implementation 'org.slf4j:slf4j-simple:2.0.7'
-    implementation 'org.telegram:telegrambots:6.5.0'
-    compileOnly 'org.projectlombok:lombok:1.18.26'
-    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+    implementation 'com.amazonaws:aws-lambda-java-events:3.12.0'
+    implementation 'com.amazonaws:aws-java-sdk-dynamodb:1.12.765'
+    implementation 'org.slf4j:slf4j-api:2.0.12'
+    implementation 'org.slf4j:slf4j-simple:2.0.13'
+    implementation 'org.telegram:telegrambots:6.9.7.0'
+    compileOnly 'org.projectlombok:lombok:1.18.34'
+    annotationProcessor 'org.projectlombok:lombok:1.18.34'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
 }
 
 test {
